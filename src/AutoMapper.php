@@ -70,26 +70,20 @@ class AutoMapper implements AutoMapperInterface
     /**
      * @inheritdoc
      */
-    public function map($source, string $destinationClass, array $context = [])
+    public function map($source, $target, array $context = [])
     {
         if ($source === null) {
             return null;
         }
 
-        if (\is_object($source)) {
-            $sourceClass = \get_class($source);
-        } else {
-            $sourceClass = \gettype($source);
-            if ($sourceClass !== DataType::ARRAY) {
-                throw UnsupportedSourceTypeException::fromType($sourceClass);
-            }
-        }
+        $sourceClass = $this->getSourceClass($source);
+        $targetClass = $this->getTargetClass($target);
+        
+        $context[self::DESTINATION_CLASS_CONTEXT] = $targetClass;
 
-        $context[self::DESTINATION_CLASS_CONTEXT] = $destinationClass;
-
-        $mapping = $this->getMapping($sourceClass, $destinationClass);
+        $mapping = $this->getMapping($sourceClass, $targetClass);
         if ($mapping->providesCustomMapper()) {
-            return $this->getCustomMapper($mapping)->map($source, $destinationClass, $context);
+            return $this->getCustomMapper($mapping)->map($source, $targetClass, $context);
         }
 
         if ($mapping->hasCustomConstructor()) {
@@ -98,14 +92,14 @@ class AutoMapper implements AutoMapperInterface
                 $this,
                 $context
             );
-        } elseif (interface_exists($destinationClass)) {
+        } elseif (interface_exists($targetClass)) {
             // If we're mapping to an interface a valid custom constructor has
             // to be provided. Otherwise we can't know what to do.
             $message = 'Mapping to an interface is not possible. Please '
                 . 'provide a concrete class or use mapToObject instead.';
             throw new AutoMapperPlusException($message);
         } else {
-            $destinationObject = new $destinationClass;
+            $destinationObject = new $targetClass;
         }
 
         $context[self::DESTINATION_CONTEXT] = $destinationObject;
@@ -278,5 +272,62 @@ class AutoMapper implements AutoMapperInterface
         }
 
         return $customMapper;
+    }
+
+    /**
+     * @param mixed $source The source object or data.
+     * @return string The source class name or data type.
+     * @throws AutoMapperPlusException
+     */
+    private function getSourceClass($source): string
+    {
+        if (\is_object($source)) {
+            return \get_class($source);
+        }
+
+        $sourceType= \gettype($source);
+        if (DataType::isDataType($sourceType)) {
+            return $sourceType;
+        }
+
+        $message = sprintf('Unsupported source type: %s', gettype($source));
+        throw new AutoMapperPlusException($message);
+    }
+
+    /**
+     * @param mixed $target The target data or string.
+     * @return string The target class name or data type.
+     * @throws AutoMapperPlusException
+     */
+    private function getTargetClass($target): string
+    {
+        if (is_string($target)) {
+            $this->checkIfValidTargetClass($target);
+            return $target;
+        }
+        if (is_object($target)) {
+            return get_class($target);
+        }
+        if (is_array($target)) {
+            return DataType::ARRAY;
+        }
+
+        $message = sprintf('Unsupported target type: %s', gettype($target));
+        throw new AutoMapperPlusException($message);
+    }
+
+    /**
+     * @param string $targetClass
+     * @throws AutoMapperPlusException
+     */
+    private function checkIfValidTargetClass(string $targetClass): void
+    {
+        if (interface_exists($targetClass)) {
+            // If we're mapping to an interface a valid custom constructor has
+            // to be provided. Otherwise we can't know what to do.
+            $message = 'Mapping to an interface is not possible. Please '
+                .'provide a concrete class or use mapToObject instead.';
+            throw new AutoMapperPlusException($message);
+        }
     }
 }
