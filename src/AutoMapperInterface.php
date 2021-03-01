@@ -15,7 +15,8 @@ interface AutoMapperInterface extends MapperInterface
      * @param array|\Traversable $sourceCollection
      *   The source collection containing objects.
      * @param string $targetClass
-     *   The target classname.
+     *   The target classname or data type. Using an object here is not
+     *   supported.
      * @param array $context
      *   See MapperInterface::map()
      * @return array
@@ -23,8 +24,8 @@ interface AutoMapperInterface extends MapperInterface
      */
     public function mapMultiple(
         $sourceCollection,
-        string $targetClass
-        /**, array $context = [] */
+        string $targetClass,
+        array $context = []
     ): array;
 
     /**

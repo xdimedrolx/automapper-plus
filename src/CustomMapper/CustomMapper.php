@@ -5,7 +5,7 @@ namespace AutoMapperPlus\CustomMapper;
 use AutoMapperPlus\MapperInterface;
 
 /**
- * Interface CustomMapperInterface
+ * Class CustomMapper
  *
  * @package AutoMapperPlus\CustomMapper
  */
@@ -14,15 +14,21 @@ abstract class CustomMapper implements MapperInterface
     /**
      * @inheritdoc
      */
-    public function map($source, string $targetClass)
+    public function map($source, $target, array $context = [])
     {
-        $destination = new $targetClass;
+        if (\is_string($target)) {
+            $target = new $target;
+        }
 
-        return $this->mapToObject($source, $destination);
+        return $this->mapToObject($source, $target, $context);
     }
 
     /**
      * @inheritdoc
      */
-    abstract public function mapToObject($source, $destination);
+    abstract public function mapToObject(
+        $source,
+        $destination,
+        array $context = []
+    );
 }
